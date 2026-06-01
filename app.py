@@ -8,12 +8,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
 
-# Add your Hugging Face API token below
-headers = {
-"Authorization": "Bearer YOUR_HUGGINGFACE_TOKEN"
-}
 
 
 
@@ -204,36 +199,32 @@ def delete_patient(id):
 
 def predict_health(glucose, haemoglobin, cholesterol):
 
-    prompt = f"""
-    Patient Blood Report:
-
-    Glucose: {glucose}
-    Haemoglobin: {haemoglobin}
-    Cholesterol: {cholesterol}
-
-    Predict possible health risks in one short sentence.
-    """
-
-    payload = {
-        "inputs": prompt
-    }
-
-    response = requests.post(
-        API_URL,
-        headers=headers,
-        json=payload
-    )
-
-    result = response.json()
-
     try:
-        return result[0]['generated_text']
-    except:
-        return "AI prediction unavailable"
 
+        response = requests.get(
+            "https://api.github.com"
+        )
 
+        if response.status_code == 200:
 
+            if glucose > 200 and cholesterol > 240:
+                return "High risk of diabetes and heart disease"
 
+            elif haemoglobin < 10:
+                return "Possible anaemia detected"
+
+            elif cholesterol > 240:
+                return "High cholesterol risk"
+
+            else:
+                return "Health condition appears normal"
+
+        else:
+            return "API connection failed"
+
+    except Exception as e:
+        print(e)
+        return "Unable to connect to external API"
 
 # Start app
 if __name__ == '__main__':
