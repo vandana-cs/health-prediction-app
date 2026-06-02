@@ -2,12 +2,31 @@
 from flask import Flask, render_template, request, redirect
 import sqlite3
 import re
-import requests
 from datetime import datetime
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
 
+def call_ai_api(prompt):
 
+    import requests
+    import os
+
+    API_KEY = os.getenv("HF_API_KEY")
+
+    url = "https://api-inference.huggingface.co/models/google/flan-t5-base"
+
+    headers = {
+        "Authorization": f"Bearer {API_KEY}"
+    }
+
+    return requests.post(
+        url,
+        headers=headers,
+        json={"inputs": prompt},
+        timeout=5
+    )
 
 
 
@@ -129,8 +148,8 @@ def edit_patient(id):
         email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
 
         if not re.match(email_pattern, email):
-            return "Invalid Email Address"
-
+            flash("Invalid Email Address")
+            return redirect('/add')
         # Date validation
         today = datetime.today().date()
         birth_date = datetime.strptime(dob, "%Y-%m-%d").date()
@@ -197,35 +216,66 @@ def delete_patient(id):
 # Prediction Function
 
 
+import os
+import requests
+
+API_KEY = os.getenv("HF_API_KEY")
+
+API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
+
+headers = {
+    "Authorization": f"Bearer {API_KEY}"
+}
+
+
+def fallback_health(glucose, haemoglobin, cholesterol):
+
+    if glucose > 200 and cholesterol > 240:
+        return "High risk of diabetes and heart disease"
+
+    elif haemoglobin < 10:
+        return "Possible anaemia detected"
+
+    elif cholesterol > 240:
+        return "High cholesterol risk"
+
+    else:
+        return "Health condition appears normal"
+
+
 def predict_health(glucose, haemoglobin, cholesterol):
+
+    prompt = f"""
+    Analyze the following patient medical report and provide a short health risk summary.
+
+    Glucose: {glucose}
+    Haemoglobin: {haemoglobin}
+    Cholesterol: {cholesterol}
+    """
 
     try:
 
-        response = requests.get(
-            "https://api.github.com"
+        response = requests.post(
+            API_URL,
+            headers=headers,
+            json={"inputs": prompt},
+            timeout=10
         )
 
-        if response.status_code == 200:
+        data = response.json()
 
-            if glucose > 200 and cholesterol > 240:
-                return "High risk of diabetes and heart disease"
+        # Hugging Face successful response
+        if isinstance(data, list):
 
-            elif haemoglobin < 10:
-                return "Possible anaemia detected"
+            if "generated_text" in data[0]:
+                return data[0]["generated_text"]
 
-            elif cholesterol > 240:
-                return "High cholesterol risk"
+        # fallback if API format changes
+        return fallback_health(glucose, haemoglobin, cholesterol)
 
-            else:
-                return "Health condition appears normal"
-
-        else:
-            return "API connection failed"
-
-    except Exception as e:
-        print(e)
-        return "Unable to connect to external API"
-
+    except Exception:
+        # fallback if no internet / API failure
+        return fallback_health(glucose, haemoglobin, cholesterol)
 # Start app
 if __name__ == '__main__':
     init_db()
