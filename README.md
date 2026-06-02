@@ -26,6 +26,13 @@ The system generates health-related remarks automatically after analysing the pa
 
 ---
 
+### Workflow
+1. Patient blood test data is collected.
+2. Data is sent to the Hugging Face AI model.
+3. The AI model generates a medical risk summary.
+4. If the API is unavailable due to network restrictions, the application uses fallback prediction logic to ensure uninterrupted functionality.
+
+---
 ## Technologies Used
 
 ### Backend
@@ -43,10 +50,17 @@ The system generates health-related remarks automatically after analysing the pa
 
 * SQLite
 
+### Model Used
+- google/flan-t5-base
+
 ### Other Libraries
 
 * Jinja2
 * Regular Expressions (re module)
+
+## AI/ML API Integration
+
+This project integrates the Hugging Face Inference API for generating AI-based medical remarks.
 
 ---
 
